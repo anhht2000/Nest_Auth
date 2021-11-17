@@ -6,7 +6,10 @@ import { Photo } from './Photo.entity';
 
 @Module({
   //import de co the su dung respontory
-  imports: [TypeOrmModule.forFeature([Photo])],
+  imports: [
+    TypeOrmModule.forFeature([Photo]),
+    // TypeOrmModule.forFeature([Photo], 'test'),
+  ],
   providers: [PhotosService],
   controllers: [PhotosController],
   exports: [PhotosService],

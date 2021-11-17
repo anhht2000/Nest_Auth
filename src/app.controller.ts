@@ -1,21 +1,36 @@
-import { PoliciesGuard } from './casl/guards/casl.guards';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { Controller, Post, Request, UseGuards, Get } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Request,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import {
+  AnyFilesInterceptor,
+  FilesInterceptor,
+} from '@nestjs/platform-express';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { diskStorage } from 'multer';
 import { AuthService } from './auth/auth.service';
 import { Roles } from './auth/decorators/roles.decorator';
-import { Role } from './auth/types/role.enum';
 import { RolesGuard } from './auth/Guard/roles.guard';
-import { CheckPolicies } from './casl/decorators/casl';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { Role } from './auth/types/role.enum';
 import {
   Action,
   AppAbility,
   CaslAbilityFactory,
 } from './casl/casl-ability.factory';
-import { UsersService } from './users/users.service';
-import { User } from './users/user.entity';
+import { CheckPolicies } from './casl/decorators/casl';
+import { PoliciesGuard } from './casl/guards/casl.guards';
 import { Photo } from './photos/Photo.entity';
 import { PhotosService } from './photos/photos.service';
+import { User } from './users/user.entity';
+import { UsersService } from './users/users.service';
 
 @Roles(Role.User)
 @Controller()
@@ -61,9 +76,11 @@ export class AppController {
   }
 
   @Get('/cals-v1')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   async findAllO(@Request() req) {
     //chạy vào guard jwt lấy token > vào factory check quyền > về đây
+    // console.log('tét', await getConnection('test'));
+
     const users = new User();
     Object.assign(users, req.user);
     const ability = this.caslAbilityFactory.createForUser(users);
@@ -96,5 +113,38 @@ export class AppController {
     } else {
       return 'no quyen';
     }
+  }
+
+  @Post('file')
+  @UseInterceptors(
+    AnyFilesInterceptor({
+      storage: diskStorage({
+        destination: function (req, file, cb) {
+          cb(null, './public');
+        },
+        filename: function (req, file, cb) {
+          const { originalname } = file;
+          const fileExtension = (originalname.match(/\.+[\S]+$/) || [])[0];
+          cb(null, `${file.fieldname}${Date.now()}${fileExtension}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (
+          file.mimetype == 'image/png' ||
+          file.mimetype == 'image/jpg' ||
+          file.mimetype == 'image/jpeg'
+        ) {
+          cb(null, true);
+        } else {
+          cb(null, false);
+          return cb(new BadRequestException('Provide a valid image'), false);
+        }
+      },
+    }),
+  )
+  uploadFile(@UploadedFiles() files: Array<Express.Multer.File>) {
+    console.log('file', files);
+
+    return 'xu lý file thành công';
   }
 }

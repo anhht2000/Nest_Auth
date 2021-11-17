@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { getConnection, Repository } from 'typeorm';
 import { User } from './user.entity';
 
 // This should be a real class/interface representing a user entity
@@ -14,8 +14,10 @@ export class UsersService {
   ) {}
 
   async findOne(username: string): Promise<User | undefined> {
-    // return this.users.find((user) => user.username === username);
+    console.log('tét', this.usersRepository);
+
     return this.usersRepository.findOne({
+      select: ['username', 'password', 'isAdmin', 'roles', 'id'],
       where: {
         username,
       },
@@ -23,6 +25,8 @@ export class UsersService {
   }
 
   async findAll(): Promise<User[]> {
+    console.log('', __dirname);
+
     return this.usersRepository.find({
       select: ['username', 'password', 'isAdmin', 'roles', 'id'],
     });
